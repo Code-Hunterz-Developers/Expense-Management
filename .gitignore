@@ -1,0 +1,9 @@
+data/
+*.db
+node_modules/
+dist/
+.next/
+out/
+.env
+.env.local
+.env*.local
