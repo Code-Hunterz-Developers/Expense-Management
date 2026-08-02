@@ -8,6 +8,7 @@ export default function Accounts() {
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const { data, refresh } = useCachedQuery('accounts:page', useCallback(async () => {
     const [accounts, settings] = await Promise.all([api.getAccounts(), api.getSettings()]);
@@ -30,15 +31,22 @@ export default function Accounts() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (editId) {
-      await api.updateAccount(editId, form);
-    } else {
-      await api.createAccount(form);
+    if (saving) return;
+    setSaving(true);
+
+    try {
+      if (editId) {
+        await api.updateAccount(editId, form);
+      } else {
+        await api.createAccount(form);
+      }
+      setForm(EMPTY);
+      setEditId(null);
+      setShowForm(false);
+      await refreshAll();
+    } finally {
+      setSaving(false);
     }
-    setForm(EMPTY);
-    setEditId(null);
-    setShowForm(false);
-    await refreshAll();
   }
 
   function handleEdit(acc) {
@@ -92,8 +100,11 @@ export default function Accounts() {
               </div>
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
-              <button type="submit" className="btn btn-primary">{editId ? 'Update' : 'Save'}</button>
-              <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY); }}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving && <span className="btn-spinner" aria-hidden="true" />}
+                {saving ? (editId ? 'Updating...' : 'Saving...') : (editId ? 'Update' : 'Save')}
+              </button>
+              <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY); }}>Cancel</button>
             </div>
           </form>
         )}

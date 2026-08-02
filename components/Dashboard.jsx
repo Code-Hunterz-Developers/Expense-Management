@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [showRevenueEdit, setShowRevenueEdit] = useState(false);
   const [rateInput, setRateInput] = useState('267');
   const [pkrInput, setPkrInput] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const cacheKey = `dashboard:${year}:${month || 'all'}`;
   const { data, loading, refresh } = useCachedQuery(cacheKey, useCallback(async () => {
@@ -51,7 +52,7 @@ export default function Dashboard() {
 
   async function saveRevenueSettings(useAuto = false) {
     const rate = parseFloat(rateInput);
-    if (!rate || rate <= 0) return;
+    if (!rate || rate <= 0 || savingSettings) return;
 
     const payload = { usd_to_pkr: rate };
     if (useAuto) {
@@ -62,11 +63,16 @@ export default function Dashboard() {
       payload.manual_revenue_pkr = '';
     }
 
-    await api.updateSettings(payload);
-    setShowRevenueEdit(false);
-    invalidateCache('dashboard');
-    invalidateCache('reports');
-    await refresh();
+    setSavingSettings(true);
+    try {
+      await api.updateSettings(payload);
+      setShowRevenueEdit(false);
+      invalidateCache('dashboard');
+      invalidateCache('reports');
+      await refresh();
+    } finally {
+      setSavingSettings(false);
+    }
   }
 
   const totalUsd = summary?.revenue_usd?.total_revenue || 0;
@@ -183,11 +189,13 @@ export default function Dashboard() {
                 </div>
 
                 <div className="revenue-edit-actions">
-                  <button type="button" className="btn btn-primary btn-sm" onClick={() => saveRevenueSettings(false)}>
-                    Save
+                  <button type="button" className="btn btn-primary btn-sm" disabled={savingSettings} onClick={() => saveRevenueSettings(false)}>
+                    {savingSettings && <span className="btn-spinner" aria-hidden="true" />}
+                    {savingSettings ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => saveRevenueSettings(true)}>
-                    Use Auto
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={savingSettings} onClick={() => saveRevenueSettings(true)}>
+                    {savingSettings && <span className="btn-spinner" aria-hidden="true" />}
+                    {savingSettings ? 'Saving...' : 'Use Auto'}
                   </button>
                 </div>
               </div>

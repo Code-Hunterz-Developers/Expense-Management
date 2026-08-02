@@ -44,6 +44,7 @@ export default function Transactions() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [filters, setFilters] = useState({ type: '', account_id: '', year: '', month: '' });
 
   const { data: accountsData } = useCachedQuery('accounts:list', () => api.getAccounts());
@@ -93,24 +94,31 @@ export default function Transactions() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const payload = {
-      ...form,
-      account_id: form.account_id || null,
-      amount: parseFloat(form.amount),
-      revenue_source: form.type === 'revenue' ? form.revenue_source : '',
-      item_name: '',
-    };
+    if (saving) return;
+    setSaving(true);
 
-    if (editId) {
-      await api.updateTransaction(editId, payload);
-    } else {
-      await api.createTransaction(payload);
+    try {
+      const payload = {
+        ...form,
+        account_id: form.account_id || null,
+        amount: parseFloat(form.amount),
+        revenue_source: form.type === 'revenue' ? form.revenue_source : '',
+        item_name: '',
+      };
+
+      if (editId) {
+        await api.updateTransaction(editId, payload);
+      } else {
+        await api.createTransaction(payload);
+      }
+
+      setForm(EMPTY_FORM);
+      setEditId(null);
+      setShowForm(false);
+      await refreshAll();
+    } finally {
+      setSaving(false);
     }
-
-    setForm(EMPTY_FORM);
-    setEditId(null);
-    setShowForm(false);
-    await refreshAll();
   }
 
   function handleEdit(tx) {
@@ -278,10 +286,11 @@ export default function Transactions() {
             </div>
 
             <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
-              <button type="submit" className="btn btn-primary">
-                {editId ? 'Update' : 'Save'} Entry
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving && <span className="btn-spinner" aria-hidden="true" />}
+                {saving ? (editId ? 'Updating...' : 'Saving...') : `${editId ? 'Update' : 'Save'} Entry`}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={cancelForm}>Cancel</button>
+              <button type="button" className="btn btn-secondary" onClick={cancelForm} disabled={saving}>Cancel</button>
             </div>
           </form>
         )}
