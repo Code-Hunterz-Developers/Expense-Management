@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { api, formatCurrency, formatRevenueWithPkr } from '@/lib/client-api';
+import { api, formatCurrency, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 const EMPTY = { name: '', email: '', notes: '', status: 'active' };
@@ -16,7 +16,6 @@ export default function Accounts() {
   }, []));
 
   const accounts = data?.accounts ?? [];
-  const exchangeRate = data?.exchangeRate ?? 267;
 
   async function refreshAll() {
     invalidateCache('accounts');
@@ -133,7 +132,7 @@ export default function Accounts() {
               <div className="account-stat">
                 <label>Total Revenue</label>
                 <span style={{ color: 'var(--success)', fontSize: 14 }}>
-                  {formatRevenueWithPkr(acc.total_revenue, exchangeRate)}
+                  {formatRevenueWithPkr(acc.total_revenue, REVENUE_WITHDRAWAL_RATE)}
                 </span>
               </div>
               <div className="account-stat">

@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
 } from 'recharts';
-import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, currencyForType, formatRevenueWithPkr } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE, txCurrency, formatUsdWithPkr } from '@/lib/client-api';
 import { useRouter } from 'next/navigation';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
@@ -12,9 +12,11 @@ export default function Dashboard() {
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState('');
   const [showRevenueEdit, setShowRevenueEdit] = useState(false);
+  const [showRateEdit, setShowRateEdit] = useState(false);
   const [rateInput, setRateInput] = useState('267');
   const [pkrInput, setPkrInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
+  const [savingRate, setSavingRate] = useState(false);
 
   const cacheKey = `dashboard:${year}:${month || 'all'}`;
   const { data, loading, refresh } = useCachedQuery(cacheKey, useCallback(async () => {
@@ -41,6 +43,7 @@ export default function Dashboard() {
   const byAccount = data?.byAccount ?? [];
   const recent = data?.recent ?? [];
   const exchangeRate = data?.exchangeRate ?? 267;
+  const revenueRate = REVENUE_WITHDRAWAL_RATE;
   const manualPkr = data?.manualPkr ?? null;
 
   useEffect(() => {
@@ -50,21 +53,17 @@ export default function Dashboard() {
     }
   }, [data]);
 
-  async function saveRevenueSettings(useAuto = false) {
-    const rate = parseFloat(rateInput);
-    if (!rate || rate <= 0 || savingSettings) return;
-
-    const payload = { usd_to_pkr: rate };
-    if (useAuto) {
-      payload.manual_revenue_pkr = '';
-    } else if (pkrInput.trim()) {
-      payload.manual_revenue_pkr = parseFloat(pkrInput);
-    } else {
-      payload.manual_revenue_pkr = '';
-    }
-
+  async function saveRevenuePkr(useAuto = false) {
+    if (savingSettings) return;
     setSavingSettings(true);
     try {
+      const payload = {
+        manual_revenue_pkr: useAuto
+          ? ''
+          : pkrInput.trim()
+            ? parseFloat(pkrInput)
+            : '',
+      };
       await api.updateSettings(payload);
       setShowRevenueEdit(false);
       invalidateCache('dashboard');
@@ -75,10 +74,27 @@ export default function Dashboard() {
     }
   }
 
+  async function saveInvestmentRate() {
+    const rate = parseFloat(rateInput);
+    if (!rate || rate <= 0 || savingRate) return;
+    setSavingRate(true);
+    try {
+      await api.updateSettings({ usd_to_pkr: rate });
+      setShowRateEdit(false);
+      invalidateCache('dashboard');
+      invalidateCache('reports');
+      invalidateCache('accounts');
+      invalidateCache('transactions');
+      await refresh();
+    } finally {
+      setSavingRate(false);
+    }
+  }
+
   const totalUsd = summary?.revenue_usd?.total_revenue || 0;
-  const calculatedPkr = totalUsd * exchangeRate;
+  const calculatedPkr = totalUsd * revenueRate;
   const revenueInAccPkr = summary?.revenue_in_acc?.pkr ?? (calculatedPkr - (summary?.pkr?.total_salary || 0) - (summary?.pkr?.total_expense || 0));
-  const revenueInAccUsd = summary?.revenue_in_acc?.usd ?? (exchangeRate > 0 ? revenueInAccPkr / exchangeRate : 0);
+  const revenueInAccUsd = summary?.revenue_in_acc?.usd ?? (revenueRate > 0 ? revenueInAccPkr / revenueRate : 0);
   const deductionsPkr = summary?.revenue_in_acc?.deductions_pkr ?? ((summary?.pkr?.total_salary || 0) + (summary?.pkr?.total_expense || 0));
 
   const filterLabel = month
@@ -143,17 +159,17 @@ export default function Dashboard() {
             {!showRevenueEdit ? (
               <>
                 <div className="stat-value revenue-display">
-                  {formatRevenueWithPkr(totalUsd, exchangeRate, manualPkr)}
+                  {formatRevenueWithPkr(totalUsd, revenueRate, manualPkr)}
                 </div>
                 <div className="revenue-meta">
-                  Rate: 1 USD = {exchangeRate} PKR
+                  Withdrawal rate: 1 USD = {revenueRate} PKR (fixed)
                   {manualPkr !== null && <span className="manual-tag"> · Manual PKR</span>}
                 </div>
 
                 <div className="revenue-in-acc">
                   <div className="stat-label">Total Revenue in Acc</div>
                   <div className="stat-value revenue-display revenue-in-acc-value">
-                    {formatRevenueWithPkr(revenueInAccUsd, exchangeRate, revenueInAccPkr)}
+                    {formatRevenueWithPkr(revenueInAccUsd, revenueRate, revenueInAccPkr)}
                   </div>
                   <div className="revenue-meta">
                     Revenue − salary & expense
@@ -168,15 +184,8 @@ export default function Dashboard() {
                   <input value={formatCurrency(totalUsd, 'USD')} disabled />
                 </div>
                 <div className="form-group">
-                  <label>1 USD = PKR Rate</label>
-                  <input
-                    type="number"
-                    value={rateInput}
-                    onChange={e => {
-                      setRateInput(e.target.value);
-                      if (!pkrInput.trim()) return;
-                    }}
-                  />
+                  <label>Withdrawal Rate (fixed)</label>
+                  <input value={`1 USD = ${revenueRate} PKR`} disabled />
                 </div>
                 <div className="form-group">
                   <label>PKR Amount (manual override)</label>
@@ -189,11 +198,11 @@ export default function Dashboard() {
                 </div>
 
                 <div className="revenue-edit-actions">
-                  <button type="button" className="btn btn-primary btn-sm" disabled={savingSettings} onClick={() => saveRevenueSettings(false)}>
+                  <button type="button" className="btn btn-primary btn-sm" disabled={savingSettings} onClick={() => saveRevenuePkr(false)}>
                     {savingSettings && <span className="btn-spinner" aria-hidden="true" />}
                     {savingSettings ? 'Saving...' : 'Save'}
                   </button>
-                  <button type="button" className="btn btn-secondary btn-sm" disabled={savingSettings} onClick={() => saveRevenueSettings(true)}>
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={savingSettings} onClick={() => saveRevenuePkr(true)}>
                     {savingSettings && <span className="btn-spinner" aria-hidden="true" />}
                     {savingSettings ? 'Saving...' : 'Use Auto'}
                   </button>
@@ -205,7 +214,32 @@ export default function Dashboard() {
       </div>
 
       <div style={{ marginBottom: 32 }}>
-        <h3 style={{ marginBottom: 16, fontSize: 16, fontWeight: 600, color: 'var(--primary)' }}>Costs & Expenses (PKR)</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--primary)' }}>Costs & Expenses (PKR)</h3>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowRateEdit(v => !v)}>
+            {showRateEdit ? 'Close Rate' : 'Edit USD Rate'}
+          </button>
+        </div>
+        {showRateEdit && (
+          <div className="panel" style={{ marginBottom: 16, padding: 16 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+              Investment USD amounts convert at this actual market rate.
+            </p>
+            <div className="form-grid" style={{ gridTemplateColumns: 'minmax(200px, 280px) auto', alignItems: 'end' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>1 USD = PKR (investment)</label>
+                <input type="number" value={rateInput} onChange={e => setRateInput(e.target.value)} />
+              </div>
+              <button type="button" className="btn btn-primary btn-sm" disabled={savingRate} onClick={saveInvestmentRate}>
+                {savingRate && <span className="btn-spinner" aria-hidden="true" />}
+                {savingRate ? 'Saving...' : 'Save Rate'}
+              </button>
+            </div>
+          </div>
+        )}
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+          Investment USD rate: 1 USD = {exchangeRate} PKR
+        </p>
         <div className="stats-grid">
           <div className="stat-card investment">
             <div className="stat-label">Total Investment</div>
@@ -242,7 +276,7 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{ background: '#1a2332', border: '1px solid #2d3a4f', borderRadius: 8 }}
                   formatter={(v, name) => {
-                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, exchangeRate, null);
+                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, revenueRate, null);
                     return formatCurrency(v, 'PKR');
                   }}
                 />
@@ -270,7 +304,7 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{ background: '#1a2332', border: '1px solid #2d3a4f', borderRadius: 8 }}
                   formatter={(v, name) => {
-                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, exchangeRate, null);
+                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, revenueRate, null);
                     return formatCurrency(v, 'PKR');
                   }}
                 />
@@ -304,7 +338,7 @@ export default function Dashboard() {
                 <div className="account-stat">
                   <label>Revenue (USD → PKR)</label>
                   <span style={{ color: 'var(--success)', fontSize: 14 }}>
-                    {formatRevenueWithPkr(acc.revenue, exchangeRate, null)}
+                    {formatRevenueWithPkr(acc.revenue, revenueRate, null)}
                   </span>
                 </div>
                 <div className="account-stat">
@@ -348,7 +382,13 @@ export default function Dashboard() {
                   <td><span className={`badge badge-${tx.type}`}>{TYPE_LABELS[tx.type]}</span></td>
                   <td>{tx.account_name || '-'}</td>
                   <td>{getTxDetail(tx)}</td>
-                  <td><strong>{tx.type === 'revenue' ? formatRevenueWithPkr(tx.amount, exchangeRate, null) : formatCurrency(tx.amount, currencyForType(tx.type))}</strong></td>
+                  <td><strong>{
+                    tx.type === 'revenue'
+                      ? formatRevenueWithPkr(tx.amount, revenueRate, null)
+                      : txCurrency(tx) === 'USD'
+                        ? formatUsdWithPkr(tx.amount, exchangeRate).combined
+                        : formatCurrency(tx.amount, 'PKR')
+                  }</strong></td>
                 </tr>
               ))}
             </tbody>

@@ -1,10 +1,19 @@
 import { useState, useCallback } from 'react';
-import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, getTxRowDetails } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 function AmountCell({ tx, exchangeRate }) {
   if (tx.type === 'revenue') {
-    const { usd, pkr } = formatRevenueSplit(tx.amount, exchangeRate);
+    const { usd, pkr } = formatRevenueSplit(tx.amount, REVENUE_WITHDRAWAL_RATE);
+    return (
+      <div className="amount-stack">
+        <div className="amount-usd">{usd}</div>
+        <div className="amount-pkr">{pkr}</div>
+      </div>
+    );
+  }
+  if (txCurrency(tx) === 'USD') {
+    const { usd, pkr } = formatUsdWithPkr(tx.amount, exchangeRate);
     return (
       <div className="amount-stack">
         <div className="amount-usd">{usd}</div>
@@ -31,6 +40,7 @@ const EMPTY_FORM = {
   type: 'investment',
   account_id: '',
   amount: '',
+  currency: 'PKR',
   date: new Date().toISOString().slice(0, 10),
   description: '',
   category: '',
@@ -82,6 +92,7 @@ export default function Transactions() {
         next.job_title = '';
         next.description = '';
         next.recipient = '';
+        next.currency = value === 'investment' ? (prev.currency === 'USD' ? 'USD' : 'PKR') : currencyForType(value);
       }
       if (name === 'revenue_source') {
         next.client_name = '';
@@ -102,6 +113,7 @@ export default function Transactions() {
         ...form,
         account_id: form.account_id || null,
         amount: parseFloat(form.amount),
+        currency: form.type === 'investment' ? form.currency : currencyForType(form.type),
         revenue_source: form.type === 'revenue' ? form.revenue_source : '',
         item_name: '',
       };
@@ -126,6 +138,7 @@ export default function Transactions() {
       type: tx.type,
       account_id: tx.account_id || '',
       amount: String(tx.amount),
+      currency: tx.currency || currencyForType(tx.type),
       date: tx.date,
       description: tx.description || tx.item_name || '',
       category: tx.category || '',
@@ -254,9 +267,19 @@ export default function Transactions() {
               )}
 
               <div className="form-group">
-                <label>Amount ({currencyForType(form.type)}) *</label>
+                <label>Amount ({form.type === 'investment' ? form.currency : currencyForType(form.type)}) *</label>
                 <input name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} required />
               </div>
+
+              {form.type === 'investment' && (
+                <div className="form-group">
+                  <label>Currency *</label>
+                  <select name="currency" value={form.currency} onChange={handleChange} required>
+                    <option value="PKR">PKR (Rs)</option>
+                    <option value="USD">USD ($) — actual rate se convert</option>
+                  </select>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Date *</label>
