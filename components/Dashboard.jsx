@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
 } from 'recharts';
-import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE, txCurrency, formatUsdWithPkr } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE, txCurrency, formatUsdWithPkr, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
 import { useRouter } from 'next/navigation';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [month, setMonth] = useState('');
   const [showRevenueEdit, setShowRevenueEdit] = useState(false);
   const [showRateEdit, setShowRateEdit] = useState(false);
-  const [rateInput, setRateInput] = useState('267');
+  const [rateInput, setRateInput] = useState('280');
   const [pkrInput, setPkrInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingRate, setSavingRate] = useState(false);
@@ -42,7 +42,7 @@ export default function Dashboard() {
   const monthly = data?.monthly ?? [];
   const byAccount = data?.byAccount ?? [];
   const recent = data?.recent ?? [];
-  const exchangeRate = data?.exchangeRate ?? 267;
+  const exchangeRate = data?.exchangeRate ?? MARKET_EXCHANGE_RATE_DEFAULT;
   const revenueRate = REVENUE_WITHDRAWAL_RATE;
   const manualPkr = data?.manualPkr ?? null;
 

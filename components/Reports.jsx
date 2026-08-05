@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { api, formatCurrency, currentYear, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE } from '@/lib/client-api';
+import { api, formatCurrency, currentYear, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
 import { useCachedQuery } from '@/lib/useCachedQuery';
 
 export default function Reports() {
@@ -34,7 +34,7 @@ export default function Reports() {
   const byAccount = data?.byAccount ?? [];
   const summary = data?.summary;
   const accounts = data?.accounts ?? [];
-  const exchangeRate = data?.exchangeRate ?? 267;
+  const exchangeRate = data?.exchangeRate ?? MARKET_EXCHANGE_RATE_DEFAULT;
   const revenueRate = REVENUE_WITHDRAWAL_RATE;
   const manualPkr = data?.manualPkr ?? null;
 

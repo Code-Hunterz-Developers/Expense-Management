@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 function AmountCell({ tx, exchangeRate }) {
@@ -61,7 +61,7 @@ export default function Transactions() {
   const accounts = accountsData ?? [];
 
   const { data: settingsData } = useCachedQuery('settings', () => api.getSettings());
-  const exchangeRate = settingsData?.usd_to_pkr ?? 267;
+  const exchangeRate = settingsData?.usd_to_pkr ?? MARKET_EXCHANGE_RATE_DEFAULT;
 
   const txKey = `transactions:${filters.type}:${filters.account_id}:${filters.year}:${filters.month}`;
   const { data: txData, loading, refresh: refreshTx } = useCachedQuery(txKey, useCallback(async () => {
@@ -92,7 +92,9 @@ export default function Transactions() {
         next.job_title = '';
         next.description = '';
         next.recipient = '';
-        next.currency = value === 'investment' ? (prev.currency === 'USD' ? 'USD' : 'PKR') : currencyForType(value);
+        next.currency = ['investment', 'expense'].includes(value)
+          ? (prev.currency === 'USD' ? 'USD' : 'PKR')
+          : currencyForType(value);
       }
       if (name === 'revenue_source') {
         next.client_name = '';
@@ -113,7 +115,7 @@ export default function Transactions() {
         ...form,
         account_id: form.account_id || null,
         amount: parseFloat(form.amount),
-        currency: form.type === 'investment' ? form.currency : currencyForType(form.type),
+        currency: ['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type),
         revenue_source: form.type === 'revenue' ? form.revenue_source : '',
         item_name: '',
       };
@@ -164,6 +166,10 @@ export default function Transactions() {
   }
 
   const needsAccount = ['investment', 'revenue', 'expense'].includes(form.type);
+  const isUsdPurchase = ['investment', 'expense'].includes(form.type) && form.currency === 'USD';
+  const usdPkrPreview = isUsdPurchase && form.amount
+    ? formatUsdWithPkr(parseFloat(form.amount), exchangeRate)
+    : null;
   const isSalary = form.type === 'salary';
   const isRevenue = form.type === 'revenue';
   const isUpworkRevenue = isRevenue && form.revenue_source === 'upwork';
@@ -267,16 +273,21 @@ export default function Transactions() {
               )}
 
               <div className="form-group">
-                <label>Amount ({form.type === 'investment' ? form.currency : currencyForType(form.type)}) *</label>
+                <label>Amount ({['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type)}) *</label>
                 <input name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} required />
+                {usdPkrPreview && (
+                  <p className="revenue-meta" style={{ marginTop: 8 }}>
+                    Actual rate: {usdPkrPreview.combined} (1 USD = {exchangeRate} PKR)
+                  </p>
+                )}
               </div>
 
-              {form.type === 'investment' && (
+              {['investment', 'expense'].includes(form.type) && (
                 <div className="form-group">
                   <label>Currency *</label>
                   <select name="currency" value={form.currency} onChange={handleChange} required>
                     <option value="PKR">PKR (Rs)</option>
-                    <option value="USD">USD ($) — actual rate se convert</option>
+                    <option value="USD">USD ($) — actual market rate se PKR</option>
                   </select>
                 </div>
               )}
