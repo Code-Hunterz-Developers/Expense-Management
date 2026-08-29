@@ -1,14 +1,24 @@
-import { useState, useCallback } from 'react';
-import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
+import { useState, useCallback, useRef } from 'react';
+import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 function AmountCell({ tx, exchangeRate }) {
   if (tx.type === 'revenue') {
-    const { usd, pkr } = formatRevenueSplit(tx.amount, REVENUE_WITHDRAWAL_RATE);
+    const pkr = revenuePkrForTx(tx);
+    const usd = Number(tx.amount) || 0;
+    const rate = revenueRateForTx(tx);
+    if (!pkr && !rate) {
+      return <span className="amount-usd">{formatCurrency(usd, 'USD')}</span>;
+    }
+    const { usd: usdFmt, pkr: pkrFmt } = formatRevenueSplit(
+      usd,
+      rate || REVENUE_WITHDRAWAL_RATE,
+      tx.withdrawal_pkr != null && tx.withdrawal_pkr !== '' ? pkr : null,
+    );
     return (
       <div className="amount-stack">
-        <div className="amount-usd">{usd}</div>
-        <div className="amount-pkr">{pkr}</div>
+        <div className="amount-usd">{usdFmt}</div>
+        <div className="amount-pkr">{pkrFmt}</div>
       </div>
     );
   }
@@ -48,9 +58,12 @@ const EMPTY_FORM = {
   revenue_source: 'upwork',
   client_name: '',
   job_title: '',
+  withdrawal_pkr: '',
+  withdrawal_rate: String(REVENUE_WITHDRAWAL_RATE),
 };
 
 export default function Transactions() {
+  const formRef = useRef(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -92,6 +105,8 @@ export default function Transactions() {
         next.job_title = '';
         next.description = '';
         next.recipient = '';
+        next.withdrawal_pkr = '';
+        next.withdrawal_rate = String(REVENUE_WITHDRAWAL_RATE);
         next.currency = ['investment', 'expense'].includes(value)
           ? (prev.currency === 'USD' ? 'USD' : 'PKR')
           : currencyForType(value);
@@ -101,13 +116,55 @@ export default function Transactions() {
         next.job_title = '';
         next.description = '';
       }
+
+      if (prev.type === 'revenue') {
+        const rate = parseFloat(next.withdrawal_rate);
+        if (name === 'amount') {
+          const usd = parseFloat(value);
+          if (usd > 0 && rate > 0) {
+            next.withdrawal_pkr = String(Math.round(usd * rate));
+          }
+        }
+        if (name === 'withdrawal_pkr') {
+          const pkr = parseFloat(value);
+          if (pkr > 0 && rate > 0) {
+            next.amount = String(Number((pkr / rate).toFixed(2)));
+          }
+        }
+        if (name === 'withdrawal_rate') {
+          const newRate = parseFloat(value);
+          const pkr = parseFloat(next.withdrawal_pkr);
+          const usd = parseFloat(next.amount);
+          if (newRate > 0 && pkr > 0) {
+            next.amount = String(Number((pkr / newRate).toFixed(2)));
+          } else if (newRate > 0 && usd > 0) {
+            next.withdrawal_pkr = String(Math.round(usd * newRate));
+          }
+        }
+      }
+
       return next;
     });
+  }
+
+  function scrollToForm() {
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function openForm() {
+    setShowForm(true);
+    scrollToForm();
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     if (saving) return;
+    if (form.type === 'revenue' && !(parseFloat(form.withdrawal_rate) > 0)) {
+      alert('Revenue ke liye Withdraw PKR / Dollar rate zaroori hai');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -117,6 +174,12 @@ export default function Transactions() {
         amount: parseFloat(form.amount),
         currency: ['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type),
         revenue_source: form.type === 'revenue' ? form.revenue_source : '',
+        withdrawal_pkr: form.type === 'revenue' && form.withdrawal_pkr.trim()
+          ? parseFloat(form.withdrawal_pkr)
+          : null,
+        withdrawal_rate: form.type === 'revenue'
+          ? parseFloat(form.withdrawal_rate) || null
+          : null,
         item_name: '',
       };
 
@@ -136,6 +199,13 @@ export default function Transactions() {
   }
 
   function handleEdit(tx) {
+    const rate = tx.withdrawal_rate || REVENUE_WITHDRAWAL_RATE;
+    const pkr = tx.withdrawal_pkr != null && tx.withdrawal_pkr !== ''
+      ? String(tx.withdrawal_pkr)
+      : tx.type === 'revenue' && tx.amount
+        ? String(Math.round(Number(tx.amount) * rate))
+        : '';
+
     setForm({
       type: tx.type,
       account_id: tx.account_id || '',
@@ -148,9 +218,12 @@ export default function Transactions() {
       revenue_source: tx.revenue_source || (tx.type === 'revenue' ? 'upwork' : ''),
       client_name: tx.client_name || '',
       job_title: tx.job_title || '',
+      withdrawal_pkr: pkr,
+      withdrawal_rate: String(rate),
     });
     setEditId(tx.id);
     setShowForm(true);
+    scrollToForm();
   }
 
   async function handleDelete(id) {
@@ -175,6 +248,14 @@ export default function Transactions() {
   const isUpworkRevenue = isRevenue && form.revenue_source === 'upwork';
   const isOtherRevenue = isRevenue && form.revenue_source === 'other';
   const showOtherDescription = isOtherRevenue || form.type === 'expense';
+  const revenueRate = parseFloat(form.withdrawal_rate);
+  const revenuePreview = isRevenue && form.amount && revenueRate > 0
+    ? formatRevenueSplit(
+      parseFloat(form.amount),
+      revenueRate,
+      form.withdrawal_pkr.trim() ? parseFloat(form.withdrawal_pkr) : null,
+    )
+    : null;
 
   return (
     <>
@@ -183,11 +264,11 @@ export default function Transactions() {
         <p>Add & manage investment, revenue, salary & expenses</p>
       </div>
 
-      <div className="panel">
+      <div className="panel tx-form-panel" ref={formRef}>
         <div className="panel-header">
           <h3 className="panel-title">{editId ? 'Edit Entry' : 'Add New Entry'}</h3>
           {!showForm && (
-            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+            <button className="btn btn-primary" onClick={openForm}>
               + Add Transaction
             </button>
           )}
@@ -272,15 +353,85 @@ export default function Transactions() {
                 </div>
               )}
 
-              <div className="form-group">
-                <label>Amount ({['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type)}) *</label>
-                <input name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} required />
-                {usdPkrPreview && (
-                  <p className="revenue-meta" style={{ marginTop: 8 }}>
-                    Actual rate: {usdPkrPreview.combined} (1 USD = {exchangeRate} PKR)
-                  </p>
-                )}
-              </div>
+              {isRevenue ? (
+                <div className="revenue-amount-section">
+                  <div className="revenue-amount-header">
+                    <span className="revenue-amount-title">Revenue Amount</span>
+                    {revenuePreview && (
+                      <div className="revenue-amount-preview">
+                        <span className="preview-usd">{revenuePreview.usd}</span>
+                        <span className="preview-eq">=</span>
+                        <span className="preview-pkr">{revenuePreview.pkr}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="revenue-amount-grid">
+                    <div className="form-group">
+                      <label>Amount (USD) *</label>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix">$</span>
+                        <input
+                          name="amount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.amount}
+                          onChange={handleChange}
+                          required
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Withdraw PKR / Dollar *</label>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix input-prefix-text">1$ =</span>
+                        <input
+                          name="withdrawal_rate"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={form.withdrawal_rate}
+                          onChange={handleChange}
+                          required
+                          placeholder="267"
+                        />
+                        <span className="input-suffix">PKR</span>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label>Withdraw PKR Amount</label>
+                      <div className="input-with-prefix">
+                        <span className="input-prefix input-prefix-text">Rs</span>
+                        <input
+                          name="withdrawal_pkr"
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={form.withdrawal_pkr}
+                          onChange={handleChange}
+                          placeholder="PKR received in bank"
+                        />
+                      </div>
+                      {form.withdrawal_pkr.trim() && form.amount && revenueRate > 0 && (
+                        <p className="revenue-meta revenue-field-hint">
+                          → USD: {formatCurrency(parseFloat(form.amount), 'USD')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Amount ({['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type)}) *</label>
+                  <input name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} required />
+                  {usdPkrPreview && (
+                    <p className="revenue-meta" style={{ marginTop: 8 }}>
+                      Actual rate: {usdPkrPreview.combined} (1 USD = {exchangeRate} PKR)
+                    </p>
+                  )}
+                </div>
+              )}
 
               {['investment', 'expense'].includes(form.type) && (
                 <div className="form-group">

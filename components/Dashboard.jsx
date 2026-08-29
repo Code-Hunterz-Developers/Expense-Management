@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
 } from 'recharts';
-import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE, txCurrency, formatUsdWithPkr, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, formatRevenueWithPkr, txCurrency, formatUsdWithPkr, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx } from '@/lib/client-api';
 import { useRouter } from 'next/navigation';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
@@ -43,8 +43,8 @@ export default function Dashboard() {
   const byAccount = data?.byAccount ?? [];
   const recent = data?.recent ?? [];
   const exchangeRate = data?.exchangeRate ?? MARKET_EXCHANGE_RATE_DEFAULT;
-  const revenueRate = REVENUE_WITHDRAWAL_RATE;
   const manualPkr = data?.manualPkr ?? null;
+  const effectiveRate = summary?.revenue_withdrawal_rate || 0;
 
   useEffect(() => {
     if (data) {
@@ -92,9 +92,10 @@ export default function Dashboard() {
   }
 
   const totalUsd = summary?.revenue_usd?.total_revenue || 0;
-  const calculatedPkr = totalUsd * revenueRate;
-  const revenueInAccPkr = summary?.revenue_in_acc?.pkr ?? (calculatedPkr - (summary?.pkr?.total_salary || 0) - (summary?.pkr?.total_expense || 0));
-  const revenueInAccUsd = summary?.revenue_in_acc?.usd ?? (revenueRate > 0 ? revenueInAccPkr / revenueRate : 0);
+  const calculatedPkr = summary?.revenue_usd?.calculated_pkr ?? 0;
+  const displayPkr = manualPkr ?? calculatedPkr;
+  const revenueInAccPkr = summary?.revenue_in_acc?.pkr ?? (displayPkr - (summary?.pkr?.total_salary || 0) - (summary?.pkr?.total_expense || 0));
+  const revenueInAccUsd = summary?.revenue_in_acc?.usd ?? (effectiveRate > 0 ? revenueInAccPkr / effectiveRate : 0);
   const deductionsPkr = summary?.revenue_in_acc?.deductions_pkr ?? ((summary?.pkr?.total_salary || 0) + (summary?.pkr?.total_expense || 0));
 
   const filterLabel = month
@@ -159,17 +160,19 @@ export default function Dashboard() {
             {!showRevenueEdit ? (
               <>
                 <div className="stat-value revenue-display">
-                  {formatRevenueWithPkr(totalUsd, revenueRate, manualPkr)}
+                  {formatRevenueWithPkr(totalUsd, effectiveRate, manualPkr ?? calculatedPkr)}
                 </div>
                 <div className="revenue-meta">
-                  Withdrawal rate: 1 USD = {revenueRate} PKR (fixed)
+                  {effectiveRate > 0
+                    ? `Avg withdrawal: 1 USD = ${Math.round(effectiveRate)} PKR (from transactions)`
+                    : 'Set Withdraw PKR / Dollar on each revenue entry'}
                   {manualPkr !== null && <span className="manual-tag"> · Manual PKR</span>}
                 </div>
 
                 <div className="revenue-in-acc">
                   <div className="stat-label">Total Revenue in Acc</div>
                   <div className="stat-value revenue-display revenue-in-acc-value">
-                    {formatRevenueWithPkr(revenueInAccUsd, revenueRate, revenueInAccPkr)}
+                    {formatRevenueWithPkr(revenueInAccUsd, effectiveRate, revenueInAccPkr)}
                   </div>
                   <div className="revenue-meta">
                     Revenue − salary & expense
@@ -184,8 +187,8 @@ export default function Dashboard() {
                   <input value={formatCurrency(totalUsd, 'USD')} disabled />
                 </div>
                 <div className="form-group">
-                  <label>Withdrawal Rate (fixed)</label>
-                  <input value={`1 USD = ${revenueRate} PKR`} disabled />
+                  <label>Withdrawal Rate (from entries)</label>
+                  <input value={effectiveRate > 0 ? `1 USD = ${Math.round(effectiveRate)} PKR` : 'Add rate on revenue transactions'} disabled />
                 </div>
                 <div className="form-group">
                   <label>PKR Amount (manual override)</label>
@@ -275,8 +278,13 @@ export default function Dashboard() {
                 <YAxis stroke="#8b9cb3" fontSize={12} />
                 <Tooltip
                   contentStyle={{ background: '#1a2332', border: '1px solid #2d3a4f', borderRadius: 8 }}
-                  formatter={(v, name) => {
-                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, revenueRate, null);
+                  formatter={(v, name, item) => {
+                    if (name === 'Revenue (USD)') {
+                      const pkr = item?.payload?.revenue_pkr;
+                      return pkr
+                        ? formatRevenueWithPkr(v, null, pkr)
+                        : formatCurrency(v, 'USD');
+                    }
                     return formatCurrency(v, 'PKR');
                   }}
                 />
@@ -303,8 +311,13 @@ export default function Dashboard() {
                 <YAxis stroke="#8b9cb3" fontSize={12} />
                 <Tooltip
                   contentStyle={{ background: '#1a2332', border: '1px solid #2d3a4f', borderRadius: 8 }}
-                  formatter={(v, name) => {
-                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, revenueRate, null);
+                  formatter={(v, name, item) => {
+                    if (name === 'Revenue (USD)') {
+                      const pkr = item?.payload?.revenue_pkr;
+                      return pkr
+                        ? formatRevenueWithPkr(v, null, pkr)
+                        : formatCurrency(v, 'USD');
+                    }
                     return formatCurrency(v, 'PKR');
                   }}
                 />
@@ -338,7 +351,7 @@ export default function Dashboard() {
                 <div className="account-stat">
                   <label>Revenue (USD → PKR)</label>
                   <span style={{ color: 'var(--success)', fontSize: 14 }}>
-                    {formatRevenueWithPkr(acc.revenue, revenueRate, null)}
+                    {formatRevenueWithPkr(acc.revenue, null, acc.revenue_pkr || null)}
                   </span>
                 </div>
                 <div className="account-stat">
@@ -384,7 +397,12 @@ export default function Dashboard() {
                   <td>{getTxDetail(tx)}</td>
                   <td><strong>{
                     tx.type === 'revenue'
-                      ? formatRevenueWithPkr(tx.amount, revenueRate, null)
+                      ? (() => {
+                        const pkr = revenuePkrForTx(tx);
+                        return pkr > 0
+                          ? formatRevenueWithPkr(tx.amount, null, pkr)
+                          : formatCurrency(tx.amount, 'USD');
+                      })()
                       : txCurrency(tx) === 'USD'
                         ? formatUsdWithPkr(tx.amount, exchangeRate).combined
                         : formatCurrency(tx.amount, 'PKR')

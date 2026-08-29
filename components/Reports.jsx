@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { api, formatCurrency, currentYear, formatRevenueWithPkr, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
+import { api, formatCurrency, currentYear, formatRevenueWithPkr, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
 import { useCachedQuery } from '@/lib/useCachedQuery';
 
 export default function Reports() {
@@ -35,7 +35,8 @@ export default function Reports() {
   const summary = data?.summary;
   const accounts = data?.accounts ?? [];
   const exchangeRate = data?.exchangeRate ?? MARKET_EXCHANGE_RATE_DEFAULT;
-  const revenueRate = REVENUE_WITHDRAWAL_RATE;
+  const effectiveRate = summary?.revenue_withdrawal_rate || 0;
+  const calculatedPkr = summary?.revenue_usd?.calculated_pkr ?? 0;
   const manualPkr = data?.manualPkr ?? null;
 
   const accountMonthlyKey = selectedAccount
@@ -86,12 +87,12 @@ export default function Reports() {
       {summary && (
         <>
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ marginBottom: 12, fontSize: 15, color: 'var(--success)' }}>Revenue (USD = PKR @ {revenueRate})</h3>
+            <h3 style={{ marginBottom: 12, fontSize: 15, color: 'var(--success)' }}>Revenue (USD = PKR from withdrawal rates)</h3>
             <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
               <div className="stat-card revenue">
                 <div className="stat-label">Total Revenue</div>
                 <div className="stat-value" style={{ fontSize: 22 }}>
-                  {formatRevenueWithPkr(summary.revenue_usd?.total_revenue, revenueRate, manualPkr)}
+                  {formatRevenueWithPkr(summary.revenue_usd?.total_revenue, effectiveRate, manualPkr ?? calculatedPkr)}
                 </div>
               </div>
             </div>
@@ -141,7 +142,7 @@ export default function Reports() {
                 <tr key={row.month}>
                   <td><strong>{row.month_label}</strong></td>
                   <td style={{ color: 'var(--info)' }}>{formatCurrency(row.investment, 'PKR')}</td>
-                  <td style={{ color: 'var(--success)' }}>{formatRevenueWithPkr(row.revenue, revenueRate)}</td>
+                  <td style={{ color: 'var(--success)' }}>{formatRevenueWithPkr(row.revenue, null, row.revenue_pkr || null)}</td>
                   <td style={{ color: 'var(--warning)' }}>{formatCurrency(row.salary, 'PKR')}</td>
                   <td style={{ color: 'var(--danger)' }}>{formatCurrency(row.expense, 'PKR')}</td>
                   <td style={{ fontWeight: 700 }}>{formatCurrency(row.total_outflow_pkr, 'PKR')}</td>
@@ -151,7 +152,7 @@ export default function Reports() {
                 <tr style={{ background: 'var(--bg-hover)' }}>
                   <td><strong>TOTAL</strong></td>
                   <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.investment, 0), 'PKR')}</strong></td>
-                  <td><strong>{formatRevenueWithPkr(monthRows.reduce((s, r) => s + r.revenue, 0), revenueRate, manualPkr)}</strong></td>
+                  <td><strong>{formatRevenueWithPkr(monthRows.reduce((s, r) => s + r.revenue, 0), effectiveRate, manualPkr ?? monthRows.reduce((s, r) => s + (r.revenue_pkr || 0), 0))}</strong></td>
                   <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.salary, 0), 'PKR')}</strong></td>
                   <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.expense, 0), 'PKR')}</strong></td>
                   <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.total_outflow_pkr, 0), 'PKR')}</strong></td>
@@ -182,7 +183,7 @@ export default function Reports() {
                   <tr key={acc.id}>
                     <td><strong>{acc.name}</strong></td>
                     <td>{formatCurrency(acc.investment, 'PKR')}</td>
-                    <td>{formatRevenueWithPkr(acc.revenue, revenueRate)}</td>
+                    <td>{formatRevenueWithPkr(acc.revenue, null, acc.revenue_pkr || null)}</td>
                     <td>{formatCurrency(acc.costs_pkr, 'PKR')}</td>
                   </tr>
                 ))}
@@ -211,8 +212,11 @@ export default function Reports() {
                 <YAxis stroke="#8b9cb3" fontSize={11} tickFormatter={v => `$${v}`} />
                 <Tooltip
                   contentStyle={{ background: '#1a2332', border: '1px solid #2d3a4f', borderRadius: 8 }}
-                  formatter={(v, name) => {
-                    if (name === 'Revenue (USD)') return formatRevenueWithPkr(v, revenueRate);
+                  formatter={(v, name, item) => {
+                    if (name === 'Revenue (USD)') {
+                      const pkr = item?.payload?.revenue_pkr;
+                      return pkr ? formatRevenueWithPkr(v, null, pkr) : formatCurrency(v, 'USD');
+                    }
                     return formatCurrency(v, 'PKR');
                   }}
                 />

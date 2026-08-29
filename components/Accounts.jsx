@@ -132,7 +132,7 @@ export default function Accounts() {
               <div className="account-stat">
                 <label>Total Revenue</label>
                 <span style={{ color: 'var(--success)', fontSize: 14 }}>
-                  {formatRevenueWithPkr(acc.total_revenue, REVENUE_WITHDRAWAL_RATE)}
+                  {formatRevenueWithPkr(acc.total_revenue, null, acc.total_revenue_pkr || null)}
                 </span>
               </div>
               <div className="account-stat">
