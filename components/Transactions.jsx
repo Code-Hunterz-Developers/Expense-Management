@@ -286,7 +286,7 @@ export default function Transactions() {
 
         {showForm && (
           <form onSubmit={handleSubmit}>
-            <div className="form-grid">
+            <div className={`form-grid ${form.type === 'investment' ? 'form-grid-tx-row' : ''}`}>
               <div className="form-group">
                 <label>Type *</label>
                 <select name="type" value={form.type} onChange={handleChange} required>
@@ -321,6 +321,26 @@ export default function Transactions() {
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {!showOtherDescription && !isUpworkRevenue && !isSalary && (
+                <div className="form-group">
+                  <label>Category</label>
+                  <input
+                    name="category"
+                    value={form.category}
+                    onChange={handleChange}
+                    placeholder="Connects, Subscription..."
+                    list="cost-categories"
+                  />
+                  <datalist id="cost-categories">
+                    <option value="Connects" />
+                    <option value="Subscription" />
+                    <option value="Boost / Ads" />
+                    <option value="Tools" />
+                    <option value="Membership" />
+                  </datalist>
                 </div>
               )}
 
@@ -432,69 +452,53 @@ export default function Transactions() {
                   </div>
                 </div>
               ) : (
-                <div className="form-group">
+                <div className="form-group form-group-compact">
                   <label>Amount ({['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type)}) *</label>
                   <input name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} required />
-                  {usdPkrPreview && (
-                    <p className="revenue-meta" style={{ marginTop: 8 }}>
-                      Actual rate: {usdPkrPreview.combined} (1 USD = {exchangeRate} PKR)
-                    </p>
-                  )}
                 </div>
               )}
 
               {['investment', 'expense'].includes(form.type) && (
-                <div className="form-group">
+                <div className="form-group form-group-compact">
                   <label>Currency *</label>
                   <select name="currency" value={form.currency} onChange={handleChange} required>
                     <option value="PKR">PKR (Rs)</option>
-                    <option value="USD">USD ($) — converted to PKR at market rate</option>
+                    <option value="USD">USD ($)</option>
                   </select>
                 </div>
               )}
 
               {['investment', 'expense'].includes(form.type) && form.account_id && (
-                <div className="form-group">
+                <div className="form-group form-group-compact">
                   <label>Paid From *</label>
                   <select name="paid_from" value={form.paid_from} onChange={handleChange} required>
                     <option value="company">Company Account</option>
-                    <option value="own_balance">ID Balance (not in revenue / not withdrawn)</option>
+                    <option value="own_balance">ID Balance</option>
                   </select>
-                  <p className="revenue-meta revenue-field-hint">
-                    Company Account — paid by the company · ID Balance — deducted from this ID&apos;s earnings (not counted in revenue or withdrawals)
-                  </p>
                 </div>
               )}
 
-              <div className="form-group">
+              <div className="form-group form-group-compact">
                 <label>Date *</label>
                 <input name="date" type="date" value={form.date} onChange={handleChange} required />
               </div>
+
+              {usdPkrPreview && (
+                <p className="form-grid-span revenue-meta revenue-field-hint">
+                  Market rate: {usdPkrPreview.combined} (1 USD = {exchangeRate} PKR)
+                </p>
+              )}
+
+              {['investment', 'expense'].includes(form.type) && form.account_id && (
+                <p className="form-grid-span revenue-meta revenue-field-hint">
+                  Company Account — paid by the company · ID Balance — deducted from this ID&apos;s Upwork earnings (not in revenue or withdrawals)
+                </p>
+              )}
 
               {isSalary && (
                 <div className="form-group">
                   <label>Recipient Name</label>
                   <input name="recipient" value={form.recipient} onChange={handleChange} placeholder="Employee name" />
-                </div>
-              )}
-
-              {!showOtherDescription && !isUpworkRevenue && (
-                <div className="form-group">
-                  <label>Category</label>
-                  <input
-                    name="category"
-                    value={form.category}
-                    onChange={handleChange}
-                    placeholder="e.g. Connects, Subscription, Boost"
-                    list="cost-categories"
-                  />
-                  <datalist id="cost-categories">
-                    <option value="Connects" />
-                    <option value="Subscription" />
-                    <option value="Boost / Ads" />
-                    <option value="Tools" />
-                    <option value="Membership" />
-                  </datalist>
                 </div>
               )}
 
