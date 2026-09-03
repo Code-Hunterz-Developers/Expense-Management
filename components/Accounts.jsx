@@ -126,7 +126,7 @@ export default function Accounts() {
 
             <div className="account-stats">
               <div className="account-stat">
-                <label>Total Investment (PKR)</label>
+                <label>Pocket Investment (PKR)</label>
                 <span style={{ color: 'var(--info)' }}>{formatCurrency(acc.total_investment, 'PKR')}</span>
               </div>
               <div className="account-stat">
@@ -136,14 +136,15 @@ export default function Accounts() {
                 </span>
               </div>
               <div className="account-stat">
-                <label>Expenses (PKR)</label>
+                <label>Pocket Expenses (PKR)</label>
                 <span style={{ color: 'var(--danger)' }}>{formatCurrency(acc.total_expense, 'PKR')}</span>
               </div>
               <div className="account-stat">
-                <label>Total Costs (PKR)</label>
+                <label>Pocket Costs (PKR)</label>
                 <span style={{ color: 'var(--warning)' }}>{formatCurrency(acc.costs_pkr, 'PKR')}</span>
               </div>
             </div>
+            <p className="account-stat-hint">Pocket = paid from company account · ID Balance costs are on ID Costs page</p>
 
             <div className="actions" style={{ marginTop: 16 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(acc)}>Edit</button>

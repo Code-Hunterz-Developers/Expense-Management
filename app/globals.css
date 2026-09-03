@@ -793,6 +793,13 @@ tr:hover td {
   font-weight: 600;
 }
 
+.account-stat-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .empty-state {
   text-align: center;
   padding: 48px;
