@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   api,
   formatCurrency,
@@ -7,19 +8,17 @@ import {
   MONTHS,
   TYPE_LABELS,
   PAID_FROM_LABELS,
-  formatUsdWithPkr,
   MARKET_EXCHANGE_RATE_DEFAULT,
   currentMonth,
 } from '@/lib/client-api';
 import { useCachedQuery } from '@/lib/useCachedQuery';
 
-function AmountDisplay({ item, exchangeRate }) {
+function AmountDisplay({ item }) {
   if (item.currency === 'USD') {
-    const { usd, pkr } = formatUsdWithPkr(item.amount, exchangeRate);
     return (
       <div className="amount-stack">
-        <div className="amount-usd">{usd}</div>
-        <div className="amount-pkr">{pkr}</div>
+        <div className="amount-usd">{formatCurrency(item.amount, 'USD')}</div>
+        <div className="amount-pkr">{formatCurrency(item.amount_pkr, 'PKR')}</div>
       </div>
     );
   }
@@ -35,7 +34,7 @@ function PaidFromBadge({ paidFrom }) {
   );
 }
 
-function MonthBlock({ month, exchangeRate }) {
+function MonthBlock({ month, onEdit }) {
   return (
     <div className="id-cost-month">
       <div className="id-cost-month-header">
@@ -63,6 +62,7 @@ function MonthBlock({ month, exchangeRate }) {
                 <th>Item</th>
                 <th>Paid From</th>
                 <th>Amount</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -84,7 +84,12 @@ function MonthBlock({ month, exchangeRate }) {
                     <PaidFromBadge paidFrom={item.paid_from} />
                   </td>
                   <td data-label="Amount">
-                    <AmountDisplay item={item} exchangeRate={exchangeRate} />
+                    <AmountDisplay item={item} />
+                  </td>
+                  <td data-label="Actions">
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(item.id)}>
+                      Edit
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -96,7 +101,7 @@ function MonthBlock({ month, exchangeRate }) {
   );
 }
 
-function AccountSection({ account, exchangeRate }) {
+function AccountSection({ account, onEdit }) {
   return (
     <div className="panel id-cost-account">
       <div className="id-cost-account-header">
@@ -124,7 +129,7 @@ function AccountSection({ account, exchangeRate }) {
         <p className="empty-state">No connects, subscriptions, or other costs recorded for this ID in the selected period</p>
       ) : (
         account.months.map(month => (
-          <MonthBlock key={month.month} month={month} exchangeRate={exchangeRate} />
+          <MonthBlock key={month.month} month={month} onEdit={onEdit} />
         ))
       )}
     </div>
@@ -132,8 +137,13 @@ function AccountSection({ account, exchangeRate }) {
 }
 
 export default function IdMonthlyCosts() {
+  const router = useRouter();
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState(currentMonth);
+
+  function handleEdit(id) {
+    router.push(`/transactions?edit=${id}`);
+  }
 
   const cacheKey = `id-costs:${year}:${month || 'all'}`;
   const { data, loading } = useCachedQuery(cacheKey, useCallback(async () => {
@@ -188,7 +198,7 @@ export default function IdMonthlyCosts() {
 
       <div className="id-cost-grid">
         {accounts.map(account => (
-          <AccountSection key={account.id} account={account} exchangeRate={exchangeRate} />
+          <AccountSection key={account.id} account={account} onEdit={handleEdit} />
         ))}
       </div>
 

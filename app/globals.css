@@ -402,17 +402,21 @@ body {
   scroll-margin-top: 88px;
 }
 
-.tx-form-panel .form-grid-tx-row {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+.tx-form-panel .form-grid-tx-cost {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: start;
 }
 
-.tx-form-panel .form-grid-tx-row-8 {
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+.tx-form-panel .form-grid-tx-cost .tx-form-usd-second-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 4px;
 }
 
-.tx-form-panel .form-grid-tx-row .form-group-compact input,
-.tx-form-panel .form-grid-tx-row .form-group-compact select {
+.tx-form-panel .form-grid-tx-cost .form-group-compact input,
+.tx-form-panel .form-grid-tx-cost .form-group-compact select {
   width: 100%;
   min-width: 0;
 }
@@ -422,26 +426,13 @@ body {
   margin: -4px 0 0;
 }
 
-@media (max-width: 1280px) {
-  .tx-form-panel .form-grid-tx-row {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    align-items: flex-end;
-    gap: 12px;
-    padding-bottom: 6px;
-    scrollbar-width: thin;
+@media (max-width: 1100px) {
+  .tx-form-panel .form-grid-tx-cost {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .tx-form-panel .form-grid-tx-row .form-group,
-  .tx-form-panel .form-grid-tx-row .form-group-compact {
-    flex: 0 0 148px;
-    min-width: 148px;
-  }
-
-  .tx-form-panel .form-grid-tx-row .form-grid-span {
-    flex: 1 0 100%;
-    min-width: 100%;
+  .tx-form-panel .form-grid-tx-cost .tx-form-usd-second-row {
+    grid-template-columns: 1fr;
   }
 }
 
