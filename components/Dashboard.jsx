@@ -3,14 +3,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line,
 } from 'recharts';
-import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, getTxDetail, formatRevenueWithPkr, txCurrency, formatUsdWithPkr, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, currentYear, currentMonth, getTxDetail, formatRevenueWithPkr, txCurrency, formatUsdWithPkr, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx } from '@/lib/client-api';
 import { useRouter } from 'next/navigation';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 export default function Dashboard() {
   const router = useRouter();
   const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState('');
+  const [month, setMonth] = useState(currentMonth);
   const [showRevenueEdit, setShowRevenueEdit] = useState(false);
   const [showRateEdit, setShowRateEdit] = useState(false);
   const [rateInput, setRateInput] = useState('280');

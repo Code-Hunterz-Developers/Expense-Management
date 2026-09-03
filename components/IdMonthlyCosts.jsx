@@ -9,6 +9,7 @@ import {
   PAID_FROM_LABELS,
   formatUsdWithPkr,
   MARKET_EXCHANGE_RATE_DEFAULT,
+  currentMonth,
 } from '@/lib/client-api';
 import { useCachedQuery } from '@/lib/useCachedQuery';
 
@@ -51,7 +52,7 @@ function MonthBlock({ month, exchangeRate }) {
       </div>
 
       {month.items.length === 0 ? (
-        <p className="id-cost-empty-month">Is mahine koi cost nahi</p>
+        <p className="id-cost-empty-month">No costs recorded for this month</p>
       ) : (
         <div className="table-wrap">
           <table className="responsive-table id-cost-table">
@@ -120,7 +121,7 @@ function AccountSection({ account, exchangeRate }) {
       </div>
 
       {account.months.length === 0 ? (
-        <p className="empty-state">Is period me is ID par koi connects/subscription/cost record nahi</p>
+        <p className="empty-state">No connects, subscriptions, or other costs recorded for this ID in the selected period</p>
       ) : (
         account.months.map(month => (
           <MonthBlock key={month.month} month={month} exchangeRate={exchangeRate} />
@@ -132,7 +133,7 @@ function AccountSection({ account, exchangeRate }) {
 
 export default function IdMonthlyCosts() {
   const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState('');
+  const [month, setMonth] = useState(currentMonth);
 
   const cacheKey = `id-costs:${year}:${month || 'all'}`;
   const { data, loading } = useCachedQuery(cacheKey, useCallback(async () => {
@@ -156,7 +157,7 @@ export default function IdMonthlyCosts() {
     <>
       <div className="page-header">
         <h2>ID Monthly Costs</h2>
-        <p>Har Upwork ID ke connects, subscription aur costs — company account ya ID balance se</p>
+        <p>Monthly connects, subscriptions, and expenses per Upwork ID — funded by company account or ID balance</p>
       </div>
 
       <div className="filters id-cost-filters">
@@ -166,7 +167,7 @@ export default function IdMonthlyCosts() {
           ))}
         </select>
         <select value={month} onChange={e => setMonth(e.target.value)}>
-          <option value="">Saara saal (month-wise)</option>
+          <option value="">Full year (by month)</option>
           {MONTHS.filter(m => m.value).map(m => (
             <option key={m.value} value={m.value}>{m.label}</option>
           ))}
@@ -175,13 +176,13 @@ export default function IdMonthlyCosts() {
 
       <div className="id-cost-legend panel">
         <p>
-          <strong>Company Account</strong> — company ne pay kiya (connects, tools, subscription waghera).
+          <strong>Company Account</strong> — Paid by the company (connects, tools, subscriptions, etc.).
         </p>
         <p>
-          <strong>ID Balance</strong> — is Upwork ID ki earning se deduct hua jo revenue me add nahi hui aur withdraw bhi nahi hui.
+          <strong>ID Balance</strong> — Deducted from this Upwork ID&apos;s earnings that were not added to revenue or withdrawn.
         </p>
         <p className="id-cost-rate-note">
-          USD costs market rate se PKR me: 1 USD = {exchangeRate} PKR
+          USD amounts converted to PKR at market rate: 1 USD = {exchangeRate} PKR
         </p>
       </div>
 
@@ -193,7 +194,7 @@ export default function IdMonthlyCosts() {
 
       {accounts.length === 0 && (
         <div className="empty-state panel">
-          <p>Koi Upwork ID nahi mili. Pehle Accounts page se IDs add karein.</p>
+          <p>No Upwork IDs found. Add accounts from the Upwork IDs page first.</p>
         </div>
       )}
     </>

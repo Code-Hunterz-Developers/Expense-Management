@@ -2,12 +2,12 @@ import { useState, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { api, formatCurrency, currentYear, formatRevenueWithPkr, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
+import { api, formatCurrency, currentYear, currentMonth, formatRevenueWithPkr, MARKET_EXCHANGE_RATE_DEFAULT } from '@/lib/client-api';
 import { useCachedQuery } from '@/lib/useCachedQuery';
 
 export default function Reports() {
   const [year, setYear] = useState(currentYear);
-  const [month, setMonth] = useState('');
+  const [month, setMonth] = useState(currentMonth);
   const [selectedAccount, setSelectedAccount] = useState('');
 
   const cacheKey = `reports:${year}:${month || 'all'}`;

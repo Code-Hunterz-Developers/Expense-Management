@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx, PAID_FROM_LABELS } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currentYear, currentMonth, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx, PAID_FROM_LABELS } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 function AmountCell({ tx, exchangeRate }) {
@@ -69,7 +69,12 @@ export default function Transactions() {
   const [editId, setEditId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [filters, setFilters] = useState({ type: '', account_id: '', year: '', month: '' });
+  const [filters, setFilters] = useState({
+    type: '',
+    account_id: '',
+    year: String(currentYear),
+    month: currentMonth,
+  });
 
   const { data: accountsData } = useCachedQuery('accounts:list', () => api.getAccounts());
   const accounts = accountsData ?? [];
@@ -165,7 +170,7 @@ export default function Transactions() {
     e.preventDefault();
     if (saving) return;
     if (form.type === 'revenue' && !(parseFloat(form.withdrawal_rate) > 0)) {
-      alert('Revenue ke liye Withdraw PKR / Dollar rate zaroori hai');
+      alert('Withdrawal rate (PKR per USD) is required for revenue entries.');
       return;
     }
     setSaving(true);
@@ -443,7 +448,7 @@ export default function Transactions() {
                   <label>Currency *</label>
                   <select name="currency" value={form.currency} onChange={handleChange} required>
                     <option value="PKR">PKR (Rs)</option>
-                    <option value="USD">USD ($) — actual market rate se PKR</option>
+                    <option value="USD">USD ($) — converted to PKR at market rate</option>
                   </select>
                 </div>
               )}
@@ -453,10 +458,10 @@ export default function Transactions() {
                   <label>Paid From *</label>
                   <select name="paid_from" value={form.paid_from} onChange={handleChange} required>
                     <option value="company">Company Account</option>
-                    <option value="own_balance">ID Balance (revenue me nahi / withdraw nahi)</option>
+                    <option value="own_balance">ID Balance (not in revenue / not withdrawn)</option>
                   </select>
                   <p className="revenue-meta revenue-field-hint">
-                    Company = company ne pay kiya · ID Balance = is ID ki earning se cut (jo revenue/withdraw me count nahi hui)
+                    Company Account — paid by the company · ID Balance — deducted from this ID&apos;s earnings (not counted in revenue or withdrawals)
                   </p>
                 </div>
               )}
