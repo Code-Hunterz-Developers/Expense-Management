@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
-import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currentYear, currentMonth, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx, PAID_FROM_LABELS } from '@/lib/client-api';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currentYear, currentMonth, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx, investmentRateForTx, investmentPkrForTx, PAID_FROM_LABELS } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 function AmountCell({ tx, exchangeRate }) {
@@ -23,11 +23,17 @@ function AmountCell({ tx, exchangeRate }) {
     );
   }
   if (txCurrency(tx) === 'USD') {
-    const { usd, pkr } = formatUsdWithPkr(tx.amount, exchangeRate);
+    const rate = investmentRateForTx(tx, exchangeRate);
+    const pkr = investmentPkrForTx(tx, exchangeRate);
+    const { usd: usdFmt, pkr: pkrFmt } = formatRevenueSplit(
+      Number(tx.amount) || 0,
+      rate,
+      tx.exchange_pkr != null && tx.exchange_pkr !== '' ? pkr : null,
+    );
     return (
       <div className="amount-stack">
-        <div className="amount-usd">{usd}</div>
-        <div className="amount-pkr">{pkr}</div>
+        <div className="amount-usd">{usdFmt}</div>
+        <div className="amount-pkr">{pkrFmt}</div>
       </div>
     );
   }
@@ -60,6 +66,8 @@ const EMPTY_FORM = {
   job_title: '',
   withdrawal_pkr: '',
   withdrawal_rate: String(REVENUE_WITHDRAWAL_RATE),
+  exchange_rate: '',
+  exchange_pkr: '',
   paid_from: 'company',
 };
 
@@ -93,6 +101,13 @@ export default function Transactions() {
   }, [filters.type, filters.account_id, filters.year, filters.month]));
   const transactions = txData ?? [];
 
+  useEffect(() => {
+    if (!showForm || editId) return;
+    if (!['investment', 'expense'].includes(form.type) || form.currency !== 'USD') return;
+    if (form.exchange_rate) return;
+    setForm(prev => ({ ...prev, exchange_rate: String(exchangeRate) }));
+  }, [showForm, editId, form.type, form.currency, form.exchange_rate, exchangeRate]);
+
   async function refreshAll() {
     invalidateCache('transactions');
     invalidateCache('dashboard');
@@ -114,6 +129,10 @@ export default function Transactions() {
         next.recipient = '';
         next.withdrawal_pkr = '';
         next.withdrawal_rate = String(REVENUE_WITHDRAWAL_RATE);
+        next.exchange_pkr = '';
+        next.exchange_rate = ['investment', 'expense'].includes(value) && (prev.currency === 'USD')
+          ? String(exchangeRate)
+          : '';
         next.currency = ['investment', 'expense'].includes(value)
           ? (prev.currency === 'USD' ? 'USD' : 'PKR')
           : currencyForType(value);
@@ -151,6 +170,39 @@ export default function Transactions() {
         }
       }
 
+      if (['investment', 'expense'].includes(prev.type) && prev.currency === 'USD') {
+        const rate = parseFloat(next.exchange_rate);
+        if (name === 'currency' && value === 'USD') {
+          next.exchange_rate = prev.exchange_rate || String(exchangeRate);
+        }
+        if (name === 'currency' && value === 'PKR') {
+          next.exchange_rate = '';
+          next.exchange_pkr = '';
+        }
+        if (name === 'amount') {
+          const usd = parseFloat(value);
+          if (usd > 0 && rate > 0) {
+            next.exchange_pkr = String(Number((usd * rate).toFixed(2)));
+          }
+        }
+        if (name === 'exchange_pkr') {
+          const pkr = parseFloat(value);
+          if (pkr > 0 && rate > 0) {
+            next.amount = String(Number((pkr / rate).toFixed(4)));
+          }
+        }
+        if (name === 'exchange_rate') {
+          const newRate = parseFloat(value);
+          const pkr = parseFloat(next.exchange_pkr);
+          const usd = parseFloat(next.amount);
+          if (newRate > 0 && pkr > 0) {
+            next.amount = String(Number((pkr / newRate).toFixed(4)));
+          } else if (newRate > 0 && usd > 0) {
+            next.exchange_pkr = String(Number((usd * newRate).toFixed(2)));
+          }
+        }
+      }
+
       return next;
     });
   }
@@ -173,6 +225,10 @@ export default function Transactions() {
       alert('Withdrawal rate (PKR per USD) is required for revenue entries.');
       return;
     }
+    if (['investment', 'expense'].includes(form.type) && form.currency === 'USD' && !(parseFloat(form.exchange_rate) > 0)) {
+      alert('USD rate (PKR per USD) is required for USD investment/expense entries.');
+      return;
+    }
     setSaving(true);
 
     try {
@@ -187,6 +243,12 @@ export default function Transactions() {
           : null,
         withdrawal_rate: form.type === 'revenue'
           ? parseFloat(form.withdrawal_rate) || null
+          : null,
+        exchange_rate: ['investment', 'expense'].includes(form.type) && form.currency === 'USD'
+          ? parseFloat(form.exchange_rate) || null
+          : null,
+        exchange_pkr: ['investment', 'expense'].includes(form.type) && form.currency === 'USD' && form.exchange_pkr.trim()
+          ? parseFloat(form.exchange_pkr)
           : null,
         paid_from: ['investment', 'expense'].includes(form.type) ? form.paid_from : null,
         item_name: '',
@@ -208,12 +270,29 @@ export default function Transactions() {
   }
 
   function handleEdit(tx) {
-    const rate = tx.withdrawal_rate || REVENUE_WITHDRAWAL_RATE;
-    const pkr = tx.withdrawal_pkr != null && tx.withdrawal_pkr !== ''
-      ? String(tx.withdrawal_pkr)
-      : tx.type === 'revenue' && tx.amount && rate
-        ? String(Number((Number(tx.amount) * rate).toFixed(2)))
-        : '';
+    const isRevenue = tx.type === 'revenue';
+    const isUsdCost = ['investment', 'expense'].includes(tx.type) && (tx.currency || 'PKR') === 'USD';
+
+    let withdrawal_rate = String(REVENUE_WITHDRAWAL_RATE);
+    let withdrawal_pkr = '';
+    let exchange_rate = '';
+    let exchange_pkr = '';
+
+    if (isRevenue) {
+      withdrawal_rate = String(tx.withdrawal_rate || REVENUE_WITHDRAWAL_RATE);
+      withdrawal_pkr = tx.withdrawal_pkr != null && tx.withdrawal_pkr !== ''
+        ? String(tx.withdrawal_pkr)
+        : tx.amount && withdrawal_rate
+          ? String(Number((Number(tx.amount) * parseFloat(withdrawal_rate)).toFixed(2)))
+          : '';
+    } else if (isUsdCost) {
+      exchange_rate = String(tx.exchange_rate || exchangeRate);
+      exchange_pkr = tx.exchange_pkr != null && tx.exchange_pkr !== ''
+        ? String(tx.exchange_pkr)
+        : tx.amount && exchange_rate
+          ? String(Number((Number(tx.amount) * parseFloat(exchange_rate)).toFixed(2)))
+          : '';
+    }
 
     setForm({
       type: tx.type,
@@ -227,8 +306,10 @@ export default function Transactions() {
       revenue_source: tx.revenue_source || (tx.type === 'revenue' ? 'upwork' : ''),
       client_name: tx.client_name || '',
       job_title: tx.job_title || '',
-      withdrawal_pkr: pkr,
-      withdrawal_rate: String(rate),
+      withdrawal_pkr,
+      withdrawal_rate,
+      exchange_rate,
+      exchange_pkr,
       paid_from: tx.paid_from || 'company',
     });
     setEditId(tx.id);
@@ -250,8 +331,8 @@ export default function Transactions() {
 
   const needsAccount = ['investment', 'revenue', 'expense'].includes(form.type);
   const isUsdPurchase = ['investment', 'expense'].includes(form.type) && form.currency === 'USD';
-  const usdPkrPreview = isUsdPurchase && form.amount
-    ? formatUsdWithPkr(parseFloat(form.amount), exchangeRate)
+  const investmentPreview = isUsdPurchase && form.amount && parseFloat(form.exchange_rate) > 0
+    ? formatUsdWithPkr(parseFloat(form.amount), parseFloat(form.exchange_rate))
     : null;
   const isSalary = form.type === 'salary';
   const isRevenue = form.type === 'revenue';
@@ -286,7 +367,7 @@ export default function Transactions() {
 
         {showForm && (
           <form onSubmit={handleSubmit}>
-            <div className={`form-grid ${form.type === 'investment' ? 'form-grid-tx-row' : ''}`}>
+            <div className={`form-grid ${['investment', 'expense'].includes(form.type) ? `form-grid-tx-row${form.currency === 'USD' ? ' form-grid-tx-row-8' : ''}` : ''}`}>
               <div className="form-group">
                 <label>Type *</label>
                 <select name="type" value={form.type} onChange={handleChange} required>
@@ -454,7 +535,7 @@ export default function Transactions() {
               ) : (
                 <div className="form-group form-group-compact">
                   <label>Amount ({['investment', 'expense'].includes(form.type) ? form.currency : currencyForType(form.type)}) *</label>
-                  <input name="amount" type="number" step="0.01" min="0" value={form.amount} onChange={handleChange} required />
+                  <input name="amount" type="number" step="any" min="0" value={form.amount} onChange={handleChange} required />
                 </div>
               )}
 
@@ -466,6 +547,43 @@ export default function Transactions() {
                     <option value="USD">USD ($)</option>
                   </select>
                 </div>
+              )}
+
+              {isUsdPurchase && (
+                <>
+                  <div className="form-group form-group-compact">
+                    <label>USD Rate *</label>
+                    <div className="input-with-prefix">
+                      <span className="input-prefix input-prefix-text">1$ =</span>
+                      <input
+                        name="exchange_rate"
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={form.exchange_rate}
+                        onChange={handleChange}
+                        required
+                        placeholder={String(exchangeRate)}
+                      />
+                      <span className="input-suffix">PKR</span>
+                    </div>
+                  </div>
+                  <div className="form-group form-group-compact">
+                    <label>PKR Amount</label>
+                    <div className="input-with-prefix">
+                      <span className="input-prefix input-prefix-text">Rs</span>
+                      <input
+                        name="exchange_pkr"
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={form.exchange_pkr}
+                        onChange={handleChange}
+                        placeholder="PKR equivalent"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               {['investment', 'expense'].includes(form.type) && form.account_id && (
@@ -483,9 +601,9 @@ export default function Transactions() {
                 <input name="date" type="date" value={form.date} onChange={handleChange} required />
               </div>
 
-              {usdPkrPreview && (
+              {investmentPreview && (
                 <p className="form-grid-span revenue-meta revenue-field-hint">
-                  Market rate: {usdPkrPreview.combined} (1 USD = {exchangeRate} PKR)
+                  {investmentPreview.combined} (1 USD = {form.exchange_rate || exchangeRate} PKR)
                 </p>
               )}
 

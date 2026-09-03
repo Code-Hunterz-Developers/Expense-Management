@@ -407,6 +407,10 @@ body {
   align-items: start;
 }
 
+.tx-form-panel .form-grid-tx-row-8 {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+}
+
 .tx-form-panel .form-grid-tx-row .form-group-compact input,
 .tx-form-panel .form-grid-tx-row .form-group-compact select {
   width: 100%;
