@@ -122,13 +122,13 @@ export default function Transactions() {
         if (name === 'amount') {
           const usd = parseFloat(value);
           if (usd > 0 && rate > 0) {
-            next.withdrawal_pkr = String(Math.round(usd * rate));
+            next.withdrawal_pkr = String(Number((usd * rate).toFixed(2)));
           }
         }
         if (name === 'withdrawal_pkr') {
           const pkr = parseFloat(value);
           if (pkr > 0 && rate > 0) {
-            next.amount = String(Number((pkr / rate).toFixed(2)));
+            next.amount = String(Number((pkr / rate).toFixed(4)));
           }
         }
         if (name === 'withdrawal_rate') {
@@ -136,9 +136,9 @@ export default function Transactions() {
           const pkr = parseFloat(next.withdrawal_pkr);
           const usd = parseFloat(next.amount);
           if (newRate > 0 && pkr > 0) {
-            next.amount = String(Number((pkr / newRate).toFixed(2)));
+            next.amount = String(Number((pkr / newRate).toFixed(4)));
           } else if (newRate > 0 && usd > 0) {
-            next.withdrawal_pkr = String(Math.round(usd * newRate));
+            next.withdrawal_pkr = String(Number((usd * newRate).toFixed(2)));
           }
         }
       }
@@ -202,8 +202,8 @@ export default function Transactions() {
     const rate = tx.withdrawal_rate || REVENUE_WITHDRAWAL_RATE;
     const pkr = tx.withdrawal_pkr != null && tx.withdrawal_pkr !== ''
       ? String(tx.withdrawal_pkr)
-      : tx.type === 'revenue' && tx.amount
-        ? String(Math.round(Number(tx.amount) * rate))
+      : tx.type === 'revenue' && tx.amount && rate
+        ? String(Number((Number(tx.amount) * rate).toFixed(2)))
         : '';
 
     setForm({
@@ -373,7 +373,7 @@ export default function Transactions() {
                         <input
                           name="amount"
                           type="number"
-                          step="0.01"
+                          step="any"
                           min="0"
                           value={form.amount}
                           onChange={handleChange}
@@ -389,7 +389,7 @@ export default function Transactions() {
                         <input
                           name="withdrawal_rate"
                           type="number"
-                          step="0.01"
+                          step="any"
                           min="0"
                           value={form.withdrawal_rate}
                           onChange={handleChange}
@@ -406,7 +406,7 @@ export default function Transactions() {
                         <input
                           name="withdrawal_pkr"
                           type="number"
-                          step="1"
+                          step="any"
                           min="0"
                           value={form.withdrawal_pkr}
                           onChange={handleChange}
