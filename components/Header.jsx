@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { IconDashboard, IconTransactions, IconAccounts, IconReports, IconBell, IconMenu, IconClose } from './Icons';
+import { IconDashboard, IconTransactions, IconAccounts, IconReports, IconIdCosts, IconBell, IconMenu, IconClose } from './Icons';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
   { id: 'transactions', label: 'Transactions', Icon: IconTransactions },
   { id: 'accounts', label: 'Upwork IDs', Icon: IconAccounts },
+  { id: 'id-costs', label: 'ID Costs', Icon: IconIdCosts },
   { id: 'reports', label: 'Reports', Icon: IconReports },
 ];
 

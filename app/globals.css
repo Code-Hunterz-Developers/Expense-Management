@@ -1128,3 +1128,168 @@ tr:hover td {
     min-width: 120px;
   }
 }
+
+/* ID Monthly Costs */
+.id-cost-filters {
+  margin-bottom: 20px;
+}
+
+.id-cost-legend {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+}
+
+.id-cost-legend p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.id-cost-legend p:last-child {
+  margin-bottom: 0;
+}
+
+.id-cost-rate-note {
+  font-size: 12px !important;
+  opacity: 0.85;
+}
+
+.id-cost-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.id-cost-account {
+  padding: 0;
+  overflow: hidden;
+}
+
+.id-cost-account-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.id-cost-account-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.id-cost-account-email {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.id-cost-year-totals {
+  text-align: right;
+}
+
+.id-cost-year-total-main label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.id-cost-year-total-main span {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.id-cost-year-split {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.id-cost-month {
+  padding: 16px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.id-cost-month:last-child {
+  border-bottom: none;
+}
+
+.id-cost-month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.id-cost-month-header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.id-cost-month-totals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.id-cost-total {
+  font-weight: 700;
+  font-size: 15px;
+  margin-right: 4px;
+}
+
+.id-cost-empty-month {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.paid-from-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.paid-from-company {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.paid-from-own {
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+}
+
+.id-cost-table {
+  min-width: 640px;
+}
+
+@media (max-width: 768px) {
+  .id-cost-account-header {
+    flex-direction: column;
+  }
+
+  .id-cost-year-totals {
+    text-align: left;
+    width: 100%;
+  }
+
+  .id-cost-year-split {
+    justify-content: flex-start;
+  }
+}

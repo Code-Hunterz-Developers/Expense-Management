@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx } from '@/lib/client-api';
+import { api, formatCurrency, formatDate, TYPE_LABELS, TYPE_LABELS_SHORT, MONTHS, YEARS, currencyForType, formatRevenueSplit, formatUsdWithPkr, getTxRowDetails, txCurrency, REVENUE_WITHDRAWAL_RATE, MARKET_EXCHANGE_RATE_DEFAULT, revenuePkrForTx, revenueRateForTx, PAID_FROM_LABELS } from '@/lib/client-api';
 import { useCachedQuery, invalidateCache } from '@/lib/useCachedQuery';
 
 function AmountCell({ tx, exchangeRate }) {
@@ -60,6 +60,7 @@ const EMPTY_FORM = {
   job_title: '',
   withdrawal_pkr: '',
   withdrawal_rate: String(REVENUE_WITHDRAWAL_RATE),
+  paid_from: 'company',
 };
 
 export default function Transactions() {
@@ -91,6 +92,7 @@ export default function Transactions() {
     invalidateCache('transactions');
     invalidateCache('dashboard');
     invalidateCache('reports');
+    invalidateCache('id-costs');
     invalidateCache('accounts');
     await refreshTx();
   }
@@ -110,6 +112,7 @@ export default function Transactions() {
         next.currency = ['investment', 'expense'].includes(value)
           ? (prev.currency === 'USD' ? 'USD' : 'PKR')
           : currencyForType(value);
+        next.paid_from = ['investment', 'expense'].includes(value) ? (prev.paid_from || 'company') : 'company';
       }
       if (name === 'revenue_source') {
         next.client_name = '';
@@ -180,6 +183,7 @@ export default function Transactions() {
         withdrawal_rate: form.type === 'revenue'
           ? parseFloat(form.withdrawal_rate) || null
           : null,
+        paid_from: ['investment', 'expense'].includes(form.type) ? form.paid_from : null,
         item_name: '',
       };
 
@@ -220,6 +224,7 @@ export default function Transactions() {
       job_title: tx.job_title || '',
       withdrawal_pkr: pkr,
       withdrawal_rate: String(rate),
+      paid_from: tx.paid_from || 'company',
     });
     setEditId(tx.id);
     setShowForm(true);
@@ -443,6 +448,19 @@ export default function Transactions() {
                 </div>
               )}
 
+              {['investment', 'expense'].includes(form.type) && form.account_id && (
+                <div className="form-group">
+                  <label>Paid From *</label>
+                  <select name="paid_from" value={form.paid_from} onChange={handleChange} required>
+                    <option value="company">Company Account</option>
+                    <option value="own_balance">ID Balance (revenue me nahi / withdraw nahi)</option>
+                  </select>
+                  <p className="revenue-meta revenue-field-hint">
+                    Company = company ne pay kiya · ID Balance = is ID ki earning se cut (jo revenue/withdraw me count nahi hui)
+                  </p>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Date *</label>
                 <input name="date" type="date" value={form.date} onChange={handleChange} required />
@@ -458,7 +476,20 @@ export default function Transactions() {
               {!showOtherDescription && !isUpworkRevenue && (
                 <div className="form-group">
                   <label>Category</label>
-                  <input name="category" value={form.category} onChange={handleChange} placeholder="e.g. Connects, Bonus, Tools" />
+                  <input
+                    name="category"
+                    value={form.category}
+                    onChange={handleChange}
+                    placeholder="e.g. Connects, Subscription, Boost"
+                    list="cost-categories"
+                  />
+                  <datalist id="cost-categories">
+                    <option value="Connects" />
+                    <option value="Subscription" />
+                    <option value="Boost / Ads" />
+                    <option value="Tools" />
+                    <option value="Membership" />
+                  </datalist>
                 </div>
               )}
 
