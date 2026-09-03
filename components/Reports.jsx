@@ -25,7 +25,7 @@ export default function Reports() {
       byAccount: acc,
       summary: sum,
       accounts: accts,
-      exchangeRate: sum.exchange_rate || 267,
+      exchangeRate: sum.exchange_rate || MARKET_EXCHANGE_RATE_DEFAULT,
       manualPkr: sum.revenue_usd?.is_manual_pkr ? sum.revenue_usd.total_revenue_pkr : null,
     };
   }, [year, month]));
