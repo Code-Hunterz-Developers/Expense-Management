@@ -665,6 +665,94 @@ body {
   white-space: nowrap;
 }
 
+.tx-mobile-list {
+  display: none;
+}
+
+.tx-mobile-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.tx-mobile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tx-mobile-date {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.tx-mobile-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tx-mobile-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.tx-mobile-value {
+  display: block;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.45;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.tx-mobile-value .tx-detail-primary,
+.tx-mobile-value .tx-detail-secondary {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.tx-mobile-amount-row {
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 -16px;
+  padding: 12px 16px;
+  border-bottom: none;
+}
+
+.tx-mobile-amount-row .amount-usd {
+  font-size: 17px;
+}
+
+.tx-mobile-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.tx-mobile-actions .btn {
+  flex: 1;
+}
+
+.tx-mobile-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 .transactions-table .col-actions {
   position: sticky;
   right: 0;
@@ -1107,15 +1195,13 @@ tr:hover td {
   }
 
   .responsive-table td {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
+    display: block;
+    padding: 11px 16px;
     border-bottom: 1px solid var(--border);
     max-width: none;
-    min-width: 0;
     white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
   .responsive-table td:last-child {
@@ -1124,39 +1210,38 @@ tr:hover td {
 
   .responsive-table td::before {
     content: attr(data-label);
+    display: block;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.5px;
     color: var(--text-muted);
-    flex-shrink: 0;
-    min-width: 90px;
-  }
-
-  .responsive-table td.col-type {
-    align-items: center;
+    margin-bottom: 6px;
   }
 
   .responsive-table td.col-type::before {
-    align-self: center;
-  }
-
-  .responsive-table td.amount-cell {
-    flex-wrap: wrap;
+    margin-bottom: 8px;
   }
 
   .responsive-table td[data-label="Actions"] .actions {
+    display: flex;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    gap: 8px;
+    justify-content: flex-start;
   }
 
   .responsive-table td.col-actions {
     background: transparent;
     box-shadow: none;
+    padding-top: 14px;
   }
 
-  .transactions-table {
-    min-width: 0;
+  .tx-mobile-list {
+    display: block;
+  }
+
+  .tx-desktop-table {
+    display: none !important;
   }
 
   .main-content {
@@ -1244,14 +1329,78 @@ tr:hover td {
   .responsive-table td > span,
   .responsive-table td > div,
   .responsive-table td.col-type {
-    flex: 1;
-    min-width: 0;
-    text-align: right;
-    word-break: break-word;
+    display: block;
+    text-align: left;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
-  .responsive-table td.col-type {
-    justify-content: space-between;
+  .responsive-table td.amount-cell strong {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .responsive-table td.col-amount .amount-usd {
+    font-size: 16px;
+  }
+
+  .dashboard-recent-table tbody tr {
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .dashboard-recent-table td[data-label="Date"],
+  .dashboard-recent-table td[data-label="Type"] {
+    display: inline-block;
+    width: 50%;
+    vertical-align: top;
+    border-bottom: none;
+    padding-bottom: 4px;
+    box-sizing: border-box;
+  }
+
+  .dashboard-recent-table td[data-label="Type"] {
+    text-align: right;
+    padding-left: 8px;
+  }
+
+  .dashboard-recent-table td[data-label="Type"]::before,
+  .dashboard-recent-table td[data-label="Date"]::before {
+    display: none;
+  }
+
+  .dashboard-recent-table td[data-label="Account"],
+  .dashboard-recent-table td[data-label="Client / Item"] {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .dashboard-recent-table td[data-label="Amount"] {
+    background: rgba(0, 0, 0, 0.12);
+    border-bottom: none;
+    padding-top: 12px;
+    padding-bottom: 14px;
+  }
+
+  .dashboard-recent-table td[data-label="Amount"]::before {
+    margin-bottom: 4px;
+  }
+
+  .dashboard-recent-table td[data-label="Amount"] strong {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .panel.recent-tx-panel {
+    padding: 16px;
+  }
+
+  .panel.recent-tx-panel .panel-header {
+    margin-bottom: 16px;
+  }
+
+  .panel.recent-tx-panel .table-wrap {
+    margin: 0 -4px;
   }
 
   .responsive-table tbody tr.reports-total-row {

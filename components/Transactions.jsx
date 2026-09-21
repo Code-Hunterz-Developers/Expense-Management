@@ -53,6 +53,43 @@ function DetailsCell({ tx }) {
   );
 }
 
+function TransactionMobileCard({ tx, exchangeRate, onEdit, onDelete }) {
+  return (
+    <article className="tx-mobile-card">
+      <div className="tx-mobile-card-header">
+        <span className="tx-mobile-date">{formatDate(tx.date)}</span>
+        <span className={`badge badge-${tx.type} badge-type`} title={TYPE_LABELS[tx.type]}>
+          {TYPE_LABELS_SHORT[tx.type]}
+        </span>
+      </div>
+
+      <div className="tx-mobile-row">
+        <span className="tx-mobile-label">Upwork ID</span>
+        <span className="tx-mobile-value">{tx.account_name || '-'}</span>
+      </div>
+
+      <div className="tx-mobile-row">
+        <span className="tx-mobile-label">Details</span>
+        <div className="tx-mobile-value">
+          <DetailsCell tx={tx} />
+        </div>
+      </div>
+
+      <div className="tx-mobile-row tx-mobile-amount-row">
+        <span className="tx-mobile-label">Amount</span>
+        <div className="tx-mobile-value">
+          <AmountCell tx={tx} exchangeRate={exchangeRate} />
+        </div>
+      </div>
+
+      <div className="tx-mobile-actions">
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(tx)}>Edit</button>
+        <button type="button" className="btn btn-danger btn-sm" onClick={() => onDelete(tx.id)}>Delete</button>
+      </div>
+    </article>
+  );
+}
+
 const EMPTY_FORM = {
   type: 'investment',
   account_id: '',
@@ -710,51 +747,67 @@ export default function Transactions() {
           </div>
         </div>
 
-        <div className="table-wrap transactions-table-wrap">
-          <table className="responsive-table transactions-table">
-            <thead>
-              <tr>
-                <th className="col-date">Date</th>
-                <th className="col-type">Type</th>
-                <th className="col-account">Upwork ID</th>
-                <th className="col-details">Details</th>
-                <th className="col-amount">Amount</th>
-                <th className="col-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && txData == null ? (
-                <tr><td colSpan={6} className="empty-state">Loading...</td></tr>
-              ) : transactions.length === 0 ? (
-                <tr><td colSpan={6} className="empty-state">No transactions found</td></tr>
-              ) : transactions.map(tx => (
-                <tr key={tx.id}>
-                  <td data-label="Date" className="col-date">{formatDate(tx.date)}</td>
-                  <td data-label="Type" className="col-type">
-                    <span className={`badge badge-${tx.type} badge-type`} title={TYPE_LABELS[tx.type]}>
-                      {TYPE_LABELS_SHORT[tx.type]}
-                    </span>
-                  </td>
-                  <td data-label="Upwork ID" className="col-account">
-                    <span className="cell-ellipsis" title={tx.account_name || '-'}>{tx.account_name || '-'}</span>
-                  </td>
-                  <td data-label="Details" className="col-details">
-                    <DetailsCell tx={tx} />
-                  </td>
-                  <td data-label="Amount" className="col-amount">
-                    <AmountCell tx={tx} exchangeRate={exchangeRate} />
-                  </td>
-                  <td data-label="Actions" className="col-actions">
-                    <div className="actions">
-                      <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(tx)}>Edit</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(tx.id)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
+        {loading && txData == null ? (
+          <div className="empty-state tx-mobile-empty">Loading...</div>
+        ) : transactions.length === 0 ? (
+          <div className="empty-state tx-mobile-empty">No transactions found</div>
+        ) : (
+          <>
+            <div className="tx-mobile-list">
+              {transactions.map(tx => (
+                <TransactionMobileCard
+                  key={tx.id}
+                  tx={tx}
+                  exchangeRate={exchangeRate}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            <div className="table-wrap transactions-table-wrap tx-desktop-table">
+              <table className="transactions-table">
+                <thead>
+                  <tr>
+                    <th className="col-date">Date</th>
+                    <th className="col-type">Type</th>
+                    <th className="col-account">Upwork ID</th>
+                    <th className="col-details">Details</th>
+                    <th className="col-amount">Amount</th>
+                    <th className="col-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map(tx => (
+                    <tr key={tx.id}>
+                      <td className="col-date">{formatDate(tx.date)}</td>
+                      <td className="col-type">
+                        <span className={`badge badge-${tx.type} badge-type`} title={TYPE_LABELS[tx.type]}>
+                          {TYPE_LABELS_SHORT[tx.type]}
+                        </span>
+                      </td>
+                      <td className="col-account">
+                        <span className="cell-ellipsis" title={tx.account_name || '-'}>{tx.account_name || '-'}</span>
+                      </td>
+                      <td className="col-details">
+                        <DetailsCell tx={tx} />
+                      </td>
+                      <td className="col-amount">
+                        <AmountCell tx={tx} exchangeRate={exchangeRate} />
+                      </td>
+                      <td className="col-actions">
+                        <div className="actions">
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleEdit(tx)}>Edit</button>
+                          <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDelete(tx.id)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

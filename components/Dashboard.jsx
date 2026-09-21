@@ -368,7 +368,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel recent-tx-panel">
         <div className="panel-header">
           <h3 className="panel-title">Recent Transactions</h3>
           <button className="btn btn-primary btn-sm" onClick={() => router.push('/transactions')}>
@@ -376,7 +376,7 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="table-wrap">
-          <table className="responsive-table">
+          <table className="responsive-table dashboard-recent-table">
             <thead>
               <tr>
                 <th>Date</th>
