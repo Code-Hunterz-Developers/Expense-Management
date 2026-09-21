@@ -124,7 +124,7 @@ export default function Reports() {
           <h3 className="panel-title">Month-wise Report ({year})</h3>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="responsive-table reports-table">
             <thead>
               <tr>
                 <th>Month</th>
@@ -137,25 +137,25 @@ export default function Reports() {
             </thead>
             <tbody>
               {monthRows.length === 0 ? (
-                <tr><td colSpan={6} className="empty-state">No data</td></tr>
+                <tr><td colSpan={6} className="empty-state empty-state-row">No data</td></tr>
               ) : monthRows.map(row => (
                 <tr key={row.month}>
-                  <td><strong>{row.month_label}</strong></td>
-                  <td style={{ color: 'var(--info)' }}>{formatCurrency(row.investment, 'PKR')}</td>
-                  <td style={{ color: 'var(--success)' }}>{formatRevenueWithPkr(row.revenue, null, row.revenue_pkr || null)}</td>
-                  <td style={{ color: 'var(--warning)' }}>{formatCurrency(row.salary, 'PKR')}</td>
-                  <td style={{ color: 'var(--danger)' }}>{formatCurrency(row.expense, 'PKR')}</td>
-                  <td style={{ fontWeight: 700 }}>{formatCurrency(row.total_outflow_pkr, 'PKR')}</td>
+                  <td data-label="Month"><strong>{row.month_label}</strong></td>
+                  <td data-label="Investment" style={{ color: 'var(--info)' }}>{formatCurrency(row.investment, 'PKR')}</td>
+                  <td data-label="Revenue" style={{ color: 'var(--success)' }}>{formatRevenueWithPkr(row.revenue, null, row.revenue_pkr || null)}</td>
+                  <td data-label="Salary" style={{ color: 'var(--warning)' }}>{formatCurrency(row.salary, 'PKR')}</td>
+                  <td data-label="Expenses" style={{ color: 'var(--danger)' }}>{formatCurrency(row.expense, 'PKR')}</td>
+                  <td data-label="Total Outflow" style={{ fontWeight: 700 }}>{formatCurrency(row.total_outflow_pkr, 'PKR')}</td>
                 </tr>
               ))}
               {monthRows.length > 0 && (
-                <tr style={{ background: 'var(--bg-hover)' }}>
-                  <td><strong>TOTAL</strong></td>
-                  <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.investment, 0), 'PKR')}</strong></td>
-                  <td><strong>{formatRevenueWithPkr(monthRows.reduce((s, r) => s + r.revenue, 0), effectiveRate, manualPkr ?? monthRows.reduce((s, r) => s + (r.revenue_pkr || 0), 0))}</strong></td>
-                  <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.salary, 0), 'PKR')}</strong></td>
-                  <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.expense, 0), 'PKR')}</strong></td>
-                  <td><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.total_outflow_pkr, 0), 'PKR')}</strong></td>
+                <tr className="reports-total-row" style={{ background: 'var(--bg-hover)' }}>
+                  <td data-label="Month"><strong>TOTAL</strong></td>
+                  <td data-label="Investment"><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.investment, 0), 'PKR')}</strong></td>
+                  <td data-label="Revenue"><strong>{formatRevenueWithPkr(monthRows.reduce((s, r) => s + r.revenue, 0), effectiveRate, manualPkr ?? monthRows.reduce((s, r) => s + (r.revenue_pkr || 0), 0))}</strong></td>
+                  <td data-label="Salary"><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.salary, 0), 'PKR')}</strong></td>
+                  <td data-label="Expenses"><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.expense, 0), 'PKR')}</strong></td>
+                  <td data-label="Total Outflow"><strong>{formatCurrency(monthRows.reduce((s, r) => s + r.total_outflow_pkr, 0), 'PKR')}</strong></td>
                 </tr>
               )}
             </tbody>
@@ -169,7 +169,7 @@ export default function Reports() {
             <h3 className="panel-title">Per Upwork ID Report</h3>
           </div>
           <div className="table-wrap">
-            <table>
+            <table className="responsive-table reports-table">
               <thead>
                 <tr>
                   <th>Upwork ID</th>
@@ -181,10 +181,10 @@ export default function Reports() {
               <tbody>
                 {byAccount.map(acc => (
                   <tr key={acc.id}>
-                    <td><strong>{acc.name}</strong></td>
-                    <td>{formatCurrency(acc.investment, 'PKR')}</td>
-                    <td>{formatRevenueWithPkr(acc.revenue, null, acc.revenue_pkr || null)}</td>
-                    <td>{formatCurrency(acc.costs_pkr, 'PKR')}</td>
+                    <td data-label="Upwork ID"><strong>{acc.name}</strong></td>
+                    <td data-label="Investment">{formatCurrency(acc.investment, 'PKR')}</td>
+                    <td data-label="Revenue">{formatRevenueWithPkr(acc.revenue, null, acc.revenue_pkr || null)}</td>
+                    <td data-label="Costs">{formatCurrency(acc.costs_pkr, 'PKR')}</td>
                   </tr>
                 ))}
               </tbody>

@@ -376,7 +376,7 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="responsive-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -388,25 +388,29 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {recent.length === 0 ? (
-                <tr><td colSpan={5} className="empty-state">No transactions yet</td></tr>
+                <tr><td colSpan={5} className="empty-state empty-state-row">No transactions yet</td></tr>
               ) : recent.map(tx => (
                 <tr key={tx.id}>
-                  <td>{formatDate(tx.date)}</td>
-                  <td><span className={`badge badge-${tx.type}`}>{TYPE_LABELS[tx.type]}</span></td>
-                  <td>{tx.account_name || '-'}</td>
-                  <td>{getTxDetail(tx)}</td>
-                  <td><strong>{
-                    tx.type === 'revenue'
-                      ? (() => {
-                        const pkr = revenuePkrForTx(tx);
-                        return pkr > 0
-                          ? formatRevenueWithPkr(tx.amount, null, pkr)
-                          : formatCurrency(tx.amount, 'USD');
-                      })()
-                      : txCurrency(tx) === 'USD'
-                        ? formatUsdWithPkr(tx.amount, exchangeRate).combined
-                        : formatCurrency(tx.amount, 'PKR')
-                  }</strong></td>
+                  <td data-label="Date">{formatDate(tx.date)}</td>
+                  <td data-label="Type" className="col-type">
+                    <span className={`badge badge-${tx.type}`}>{TYPE_LABELS[tx.type]}</span>
+                  </td>
+                  <td data-label="Account">{tx.account_name || '-'}</td>
+                  <td data-label="Client / Item">{getTxDetail(tx)}</td>
+                  <td data-label="Amount" className="amount-cell">
+                    <strong>{
+                      tx.type === 'revenue'
+                        ? (() => {
+                          const pkr = revenuePkrForTx(tx);
+                          return pkr > 0
+                            ? formatRevenueWithPkr(tx.amount, null, pkr)
+                            : formatCurrency(tx.amount, 'USD');
+                        })()
+                        : txCurrency(tx) === 'USD'
+                          ? formatUsdWithPkr(tx.amount, exchangeRate).combined
+                          : formatCurrency(tx.amount, 'PKR')
+                    }</strong>
+                  </td>
                 </tr>
               ))}
             </tbody>

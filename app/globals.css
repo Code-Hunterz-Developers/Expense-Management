@@ -41,6 +41,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* ─── Top Header Nav ─────────────────────────────────────── */
@@ -229,8 +231,9 @@ body {
 .main-content {
   flex: 1;
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   padding: 28px 32px 40px;
+  overflow-x: hidden;
 }
 
 .auth-loading {
@@ -1168,6 +1171,96 @@ tr:hover td {
     flex: 1;
     min-width: 120px;
   }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+  }
+
+  .stat-card {
+    padding: 18px;
+  }
+
+  .stat-value.revenue-display {
+    font-size: 18px;
+    word-break: break-word;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel-header .btn,
+  .panel-header select {
+    width: 100%;
+  }
+
+  .page-header h2 {
+    font-size: 22px;
+  }
+
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid-tx-cost {
+    grid-template-columns: 1fr;
+  }
+
+  .tx-form-panel .form-grid-tx-cost .tx-form-usd-second-row {
+    grid-template-columns: 1fr;
+  }
+
+  .id-cost-table {
+    min-width: 0;
+  }
+
+  .id-cost-month-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .id-cost-month-totals {
+    width: 100%;
+  }
+
+  .table-wrap {
+    overflow-x: visible;
+  }
+
+  .responsive-table td.empty-state-row {
+    display: block;
+    border-bottom: none;
+    padding: 24px 16px;
+    text-align: center;
+  }
+
+  .responsive-table td.empty-state-row::before {
+    display: none;
+  }
+
+  .responsive-table td > strong,
+  .responsive-table td > span,
+  .responsive-table td > div,
+  .responsive-table td.col-type {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .responsive-table td.col-type {
+    justify-content: space-between;
+  }
+
+  .responsive-table tbody tr.reports-total-row {
+    border-color: var(--primary);
+  }
+
+  .recharts-responsive-container {
+    min-width: 0 !important;
+  }
 }
 
 /* ID Monthly Costs */
@@ -1332,5 +1425,9 @@ tr:hover td {
 
   .id-cost-year-split {
     justify-content: flex-start;
+  }
+
+  .id-cost-table {
+    min-width: 0;
   }
 }
